@@ -3,6 +3,7 @@
 #include <kinc/log.h>
 #include <kinc/system.h>
 #include <kinc/display.h>
+#include <kinc/threads/atomic.h>
 
 #include <krink/system.h>
 #include <krink/graphics2/graphics.h>
@@ -75,10 +76,17 @@ static const luaL_Reg* lib[] = {
     { NULL, NULL }
 };
 
+static int* end_state;
 void shutdown(void* udata){
-    
+
+    *end_state = 1;
     kr_g2_destroy();
     free(memblck);
+}
+
+void game_loop(void* udata){
+
+
 }
 
 KINC_FUNC int luaopen_luauc_engine(lua_State* L, void* LUAUC) {
@@ -100,6 +108,10 @@ KINC_FUNC int luaopen_luauc_engine(lua_State* L, void* LUAUC) {
     luaopen_system(L);
 
     kinc_set_shutdown_callback(shutdown,NULL);
+    kinc_set_update_callback(game_loop,NULL);
+
+    lua_getglobal(L,"is_runtime_active");
+    end_state = (int*)lua_tolightuserdata(L,-1);
 
     return 1;
 }

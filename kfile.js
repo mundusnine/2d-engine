@@ -8,6 +8,11 @@ platform === Platform.Android ? "android" :
 platform === Platform.iOS     ? "ios" :
 								   "unknown";
 
+let outputDir = 'Deployment';
+const id = process.argv.indexOf("--to");							   
+if( id != -1){
+	outputDir = process.argv[id+1];
+}
 let project = new Project('engine');
 
 await project.addProject('../Kinc');
@@ -21,7 +26,7 @@ project.addFiles('Sources/**','Shaders/**');
 // project.addLib('dl');
 // project.addLib('m');
 
-project.setDebugDir('Deployment');
+project.setDebugDir(outputDir);
 
 project.flatten();
 
