@@ -26,12 +26,19 @@
 #endif
 
 bool in_foreground = true;
-
-static kr_evt_event_t events[64];
+#define MAX_EVENTS 64
+static kr_evt_event_t events[MAX_EVENTS];
 static uint8_t num_events = 0;
 static uint8_t curr_idx = 0;
 void event_handler(kr_evt_event_t event){
-  events[num_events++] = event;
+  if(num_events + 1 < MAX_EVENTS){
+    events[num_events++] = event;
+  }
+  else {
+    num_events = 0;
+    memset(events,0,sizeof(kr_evt_event_t) * MAX_EVENTS);
+    kinc_log(KINC_LOG_LEVEL_WARNING,"You are not calling poll_event enough. Purged input events.");
+  }
 }
 
 int poll_event(kr_evt_event_t* e){
@@ -405,7 +412,7 @@ static const luaL_Reg lib[] = {
 int luaopen_system(lua_State *L) {
   
   lua_getglobal(L,"Engine");
-  luaL_setfuncs(L,lib,0);
+  luaL_register(L,NULL,lib);
   lua_pop(L,1);
 
   return 1;
