@@ -11,6 +11,7 @@
 #include <krink/color.h>
 #include <krink/system.h>
 #include <krink/memory.h>
+#include <krink/image.h>
 #include <krink/graphics2/graphics.h>
 #include <krink/graphics2/stb_truetype.h>
 #include <krink/graphics2/ttf.h>
@@ -266,7 +267,7 @@ static int f_set_clip_rect(lua_State *L) {
 }
 
 static void f_pop_clip_rect(lua_State* L){
-  void ren_pop_clip_rect();
+  ren_pop_clip_rect();
   return 0;
 }
 
@@ -325,12 +326,78 @@ static const luaL_Reg lib[] = {
   { NULL,            NULL            }
 };
 
+static int free_image(lua_State* L) {
+  lua_getfield(L,1,"imageData");
+  kr_image_t* img = lua_tolightuserdata(L,-1);
+
+  kr_free(img);
+};
+
+static int draw_image(lua_State* L) {
+  lua_getfield(L,1,"imageData");
+  kr_image_t* img = lua_tolightuserdata(L,-1);
+  lua_getfield(L,1,"pos");
+  float* pos =  lua_tovector(L,-1);
+  lua_getfield(L,1,"scale");
+  float* scale =  lua_tovector(L,-1);
+  lua_pop(L,3);
+
+  // kr_matrix3x3_t m = kr_g2_get_transform();
+  // kr_matrix3x3_t trans = kr_matrix3x3_translation(pos[0],pos[1]);
+
+  // m = kr_matrix3x3_multmat(&m,&trans);
+
+  // kr_g2_set_transform(m);
+
+  int flipx = scale[2];
+  int flipy = scale[3];
+  int w = img->real_width;
+  int h = img->real_height;
+  kr_g2_draw_scaled_sub_image(img,0,0,w,h,(flipx > 0.0 ? w:0),(flipy > 0.0 ? h:0),(flipx > 0.0 ? -w:w), (flipy > 0.0 ? -h:h));
+};
+
+static int new_image(lua_State* L) {
+    const char *path = luaL_checkstring(L, 1); // Get the 'path' parameter
+
+    kr_image_t* img = kr_malloc(sizeof(kr_image_t));
+    assert(img != NULL);
+    kr_image_load(img,path,false);
+
+    lua_newtable(L);
+    lua_pushlightuserdata(L,img);
+    lua_setfield(L, -2, "imageData");
+
+    lua_pushvector(L,0.0f,0.0f,0.0f,0.0f);
+    lua_setfield(L,-2,"pos");
+
+    lua_pushvector(L,0.0f,0.0f,0.0f,0.0f);
+    lua_setfield(L,-2,"scale");
+
+    lua_pushcfunction(L,free_image,"free_image");
+    lua_setfield(L,-2,"free_image");
+
+    lua_pushcfunction(L,draw_image,"draw_image");
+    lua_setfield(L,-2,"draw");
+    
+    return 1;
+}
+
+static const luaL_Reg image_methods[] = {
+  { "new",      new_image      },
+  { NULL,            NULL            }
+};
 
 int luaopen_renderer_font(lua_State *L);
 
 int luaopen_renderer(lua_State *L) {
     lua_newtable(L);
     lua_setglobal(L,"Gfx");
+
+    luaL_newmetatable(L, "Image");
+    luaL_register(L, NULL, image_methods);
+    lua_pushvalue(L, -1);
+    lua_setfield(L, -2, "__index");
+    lua_setglobal(L, "Image");
 
     lua_getglobal(L,"Gfx");
     luaL_register(L,NULL,lib);

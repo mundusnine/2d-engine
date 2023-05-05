@@ -52,20 +52,27 @@ static void kr_alloctrack_malloc(void *ptr, size_t size) {
 			kr_allocs[i].size = size;
 			++kr_pool_num_allocs;
 			kr_pool_allocated += size;
-			kr_pool_allocated_max = (kr_pool_allocated > kr_pool_allocated_max) ? kr_pool_allocated : kr_pool_allocated_max;
+			kr_pool_allocated_max = (kr_pool_allocated > kr_pool_allocated_max)
+			                            ? kr_pool_allocated
+			                            : kr_pool_allocated_max;
 			return;
 		}
 	}
 	kr_allocs = (kr_alloc_t *)realloc(kr_allocs, 2 * kr_allocs_count * sizeof(kr_alloc_t));
 	assert(kr_allocs);
+	for (int i = kr_allocs_count; i < 2 * kr_allocs_count; ++i) {
+		kr_allocs[i].ptr = NULL;
+		kr_allocs[i].size = 0;
+	}
 	kr_allocs[kr_allocs_count].ptr = ptr;
 	kr_allocs[kr_allocs_count].size = size;
+	++kr_pool_num_allocs;
 	kr_allocs_count *= 2;
 }
 
 static void kr_alloctrack_free(void *ptr) {
 	if (ptr == NULL) return;
-	
+
 	for (int i = 0; i < kr_allocs_count; ++i) {
 		if (kr_allocs[i].ptr == ptr) {
 			kr_allocs[i].ptr = NULL;
@@ -83,7 +90,9 @@ static void kr_alloctrack_realloc(void *old, void *ptr, size_t size) {
 		if (kr_allocs[i].ptr == old) {
 			kr_allocs[i].ptr = ptr;
 			kr_pool_allocated += size - kr_allocs[i].size;
-			kr_pool_allocated_max = (kr_pool_allocated > kr_pool_allocated_max) ? kr_pool_allocated : kr_pool_allocated_max;
+			kr_pool_allocated_max = (kr_pool_allocated > kr_pool_allocated_max)
+			                            ? kr_pool_allocated
+			                            : kr_pool_allocated_max;
 			kr_allocs[i].size = size;
 			return;
 		}

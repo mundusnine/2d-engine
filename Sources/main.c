@@ -33,7 +33,8 @@ int engine_init(lua_State* L){
     if(server_update.func == NULL){
         char* err = "Call Engine.set_update before calling init. Will not initialize.";
         kinc_log(KINC_LOG_LEVEL_ERROR,err);
-        luaL_error(L,err);
+        lua_pushstring(L,err);
+        lua_error(L);
         return -1;
     }
     kinc_display_init();
@@ -41,8 +42,9 @@ int engine_init(lua_State* L){
 
     kinc_init("middle-engine",dm.width * 0.8,dm.height * 0.8,NULL,NULL);
 
-    mem_size = 1024 * 1024;// * 1024;
+    mem_size = 1024 * 1024 * 1024;//1 GiB
     memblck = malloc(mem_size);
+    memset(memblck,0,mem_size);
     kr_init(memblck,mem_size,NULL,0);
     kr_g2_init();
     kr_evt_init();
