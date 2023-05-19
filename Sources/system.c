@@ -408,12 +408,54 @@ static const luaL_Reg lib[] = {
   { NULL, NULL }
 };
 
+static int f_assets_load(lua_State* L){
+  const char* filepath = luaL_checkstring(L,1);
+  FILE* file = fopen(filepath,"rb+");
+  fseek(file, 0, SEEK_END);
+  size_t size = ftell(file);
+  fseek(file, 0, SEEK_SET);
+  
+  char* str = kr_malloc(size+1);
+
+  size_t read = fread(str,1,size,file);
+  if(read < size){
+    kr_free(str);
+    fclose(file);
+    char err[1024] = {0};
+    snprintf(err,1024,"Failed to read file %s",filepath);
+    lua_pushstring(L,err);
+    lua_error(L);
+
+    return 0;
+  }
+
+  str[size] = '\0';
+  lua_pushstring(L,str);
+  kr_free(str);
+  fclose(file);
+
+  return 1;
+}
+
+static const luaL_Reg assets_lib[] = {
+  { "load", f_assets_load },
+  { NULL, NULL }
+};
 
 int luaopen_system(lua_State *L) {
   
   lua_getglobal(L,"Engine");
   luaL_register(L,NULL,lib);
   lua_pop(L,1);
+
+  lua_newtable(L);
+  luaL_register(L,NULL,assets_lib);
+  lua_setglobal(L,"Assets");
+
+  lua_newtable(L);
+  lua_pushnumber(L,0.0);
+  lua_setfield(L,-2,"dt");
+  lua_setglobal(L,"Timer");
 
   return 1;
 }

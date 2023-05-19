@@ -336,24 +336,26 @@ static int free_image(lua_State* L) {
 static int draw_image(lua_State* L) {
   lua_getfield(L,1,"imageData");
   kr_image_t* img = lua_tolightuserdata(L,-1);
-  lua_getfield(L,1,"pos");
-  float* pos =  lua_tovector(L,-1);
-  lua_getfield(L,1,"scale");
-  float* scale =  lua_tovector(L,-1);
-  lua_pop(L,3);
+  lua_pop(L,1);
 
-  // kr_matrix3x3_t m = kr_g2_get_transform();
-  // kr_matrix3x3_t trans = kr_matrix3x3_translation(pos[0],pos[1]);
+  float* pos = luaL_checkvector(L,2);
+  float* scale = luaL_checkvector(L,3);
+  float x = luaL_checknumber(L,4);
+  float y = luaL_checknumber(L,5);
+  float w = luaL_checknumber(L,6);
+  float h = luaL_checknumber(L,7);
 
-  // m = kr_matrix3x3_multmat(&m,&trans);
+  kr_matrix3x3_t m = kr_g2_get_transform();
+  kr_matrix3x3_t trans = kr_matrix3x3_translation(pos[0],pos[1]);
 
-  // kr_g2_set_transform(m);
+  m = kr_matrix3x3_multmat(&m,&trans);
+
+  kr_g2_set_transform(m);
 
   int flipx = scale[2];
   int flipy = scale[3];
-  int w = img->real_width;
-  int h = img->real_height;
-  kr_g2_draw_scaled_sub_image(img,0,0,w,h,(flipx > 0.0 ? w:0),(flipy > 0.0 ? h:0),(flipx > 0.0 ? -w:w), (flipy > 0.0 ? -h:h));
+  kr_g2_set_color(KINC_COLOR_WHITE);
+  kr_g2_draw_scaled_sub_image(img,x,y,w,h,(flipx > 0.0 ? w:0),(flipy > 0.0 ? h:0),(flipx > 0.0 ? -w:w), (flipy > 0.0 ? -h:h));
 };
 
 static int new_image(lua_State* L) {
@@ -366,12 +368,6 @@ static int new_image(lua_State* L) {
     lua_newtable(L);
     lua_pushlightuserdata(L,img);
     lua_setfield(L, -2, "imageData");
-
-    lua_pushvector(L,0.0f,0.0f,0.0f,0.0f);
-    lua_setfield(L,-2,"pos");
-
-    lua_pushvector(L,0.0f,0.0f,0.0f,0.0f);
-    lua_setfield(L,-2,"scale");
 
     lua_pushcfunction(L,free_image,"free_image");
     lua_setfield(L,-2,"free_image");

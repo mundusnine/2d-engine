@@ -1,5 +1,6 @@
 
 #include <stdlib.h>
+#include <string.h>
 
 #include <kinc/global.h>
 #include <kinc/log.h>
@@ -13,6 +14,9 @@
 #define LUAUC_PLUGIN_IMPL
 #include "luauc_plugin_api.h"
 
+#include "luau_ext.h"
+
+#include "lmath.h"
 #include "system.h"
 #include "renderer.h"
 
@@ -108,16 +112,24 @@ int error_handler(lua_State* L) {
     return 0;
 }
 
+double dt = 0.0;
 void game_loop(void* udata){
     lua_State* L = local_L;
+    dt = kinc_time() - dt;
+    lua_getglobal(L,"Timer");
+    lua_pushnumber(L, dt);
+    lua_setfield(L, -2, "dt");
+    lua_pop(L, 1);
+    dt = kinc_time();
     if(server_update.func != NULL){
         ((lua_CFunction)server_update.func)(L);
     }
 
     if(runtime_update.func == NULL) return;
     if(runtime_update.is_lua){
+        lua_pushcfunction(L,error_handler,"error_handler");
         lua_getref(L,runtime_update.func);
-        lua_pcall(L,0,1,0);
+        lua_pcall(L,0,1,-2);
     }
     else{
         ((lua_CFunction)runtime_update.func)(L);
@@ -142,6 +154,7 @@ KINC_FUNC int luaopen_luauc_engine(lua_State* L, void* LUAUC) {
     lua_pop(L, 1);// Pop Engine
 
     //Superfluous elements
+    luaopen_lmath(L);
     luaopen_system(L);
     luaopen_renderer(L);
 

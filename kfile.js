@@ -1,4 +1,5 @@
 
+const path = require('path')
 const system = platform === Platform.Windows ? "win32" :
 platform === Platform.Linux   ? "linux" :
 platform === Platform.FreeBSD   ? "freebsd" :
@@ -18,10 +19,15 @@ let project = new Project('engine');
 await project.addProject('../Kinc');
 
 project.addIncludeDir('../plugin_api');
+project.addIncludeDir('../Libraries/luau_extensions');
 project.addIncludeDir('Sources/api');
 
 project.addIncludeDir('Sources');
-project.addFiles('Sources/**','Shaders/**');
+project.addFiles(
+	'Sources/**',
+	'Shaders/**',
+	path.resolve('../Libraries/luau_extensions/loadlib.cpp'),
+);
 
 // project.addLib('dl');
 // project.addLib('m');
