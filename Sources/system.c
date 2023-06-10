@@ -30,7 +30,7 @@ bool in_foreground = true;
 static kr_evt_event_t events[MAX_EVENTS];
 static uint8_t num_events = 0;
 static uint8_t curr_idx = 0;
-void event_handler(kr_evt_event_t event){
+void luaevent_handler(kr_evt_event_t event){
   if(num_events + 1 < MAX_EVENTS){
     events[num_events++] = event;
   }

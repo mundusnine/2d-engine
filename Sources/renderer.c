@@ -17,7 +17,6 @@
 #include <krink/graphics2/ttf.h>
 #include "renderer.h"
 
-typedef struct RenImage RenImage;
 typedef struct RenFont {
   kr_ttf_font_t* data;
   float size;
@@ -27,17 +26,10 @@ typedef struct RenFont {
 typedef enum { FONT_HINTING_NONE, FONT_HINTING_SLIGHT, FONT_HINTING_FULL } ERenFontHinting;
 typedef enum { FONT_ANTIALIASING_NONE, FONT_ANTIALIASING_GRAYSCALE, FONT_ANTIALIASING_SUBPIXEL } ERenFontAntialiasing;
 typedef enum { FONT_STYLE_BOLD = 1, FONT_STYLE_ITALIC = 2, FONT_STYLE_UNDERLINE = 4, FONT_STYLE_SMOOTH = 8, FONT_STYLE_STRIKETHROUGH = 16 } ERenFontStyle;
-typedef struct { uint8_t b, g, r, a; } RenColor;
-typedef struct { int x, y, width, height; } RenRect;
 
 
 
 #define MAX_GLYPHSET 256
-
-struct RenImage {
-  RenColor *pixels;
-  int width, height;
-};
 
 typedef struct {
   RenImage *image;
@@ -64,15 +56,6 @@ static void* check_alloc(void *ptr) {
   return ptr;
 }
 
-
-void ren_init(void) {
-  kr_g2_init();
-  int w = kinc_width();
-  int h = kinc_height();
-}
-
-void ren_update_rects(RenRect *rects, int count) {}
-
 void ren_set_clip_rect(RenRect rect) {
   kr_g2_scissor(rect.x,rect.y,rect.width,rect.height);
 }
@@ -88,20 +71,23 @@ void ren_get_size(int *x, int *y) {
 }
 
 
-// RenImage* ren_new_image(int width, int height) {
-//   assert(width > 0 && height > 0);
-//   RenImage *image = kr_malloc(sizeof(RenImage) + width * height * sizeof(RenColor));
-//   check_alloc(image);
-//   image->pixels = (void*) (image + 1);
-//   image->width = width;
-//   image->height = height;
-//   return image;
-// }
+RenImage* ren_new_image(const char* path) {
+  RenImage* out = kr_malloc(sizeof(RenImage));
+  out->ren_data = kr_malloc(sizeof(kr_image_t));
+  assert(out->ren_data != NULL);
+  kr_image_load(out->ren_data,path,false);
+  kr_image_t* temp = out->ren_data;
+  out->width = temp->real_width;
+  out->height = temp->real_height;
+
+  return out;
+}
 
 
-// void ren_free_image(RenImage *image) {
-//   kr_free(image);
-// }
+void ren_free_image(RenImage *image) {
+  kr_free(image->ren_data);
+  kr_free(image);
+}
 
 struct Font{
   char fname[260];
@@ -199,8 +185,29 @@ void ren_draw_rect(RenRect rect, RenColor color) {
   kr_g2_fill_rect(rect.x,rect.y,rect.width,rect.height);
 }
 
+void ren_draw_tri(float* v, RenColor color) {
+  kr_g2_set_color(color_to_uint(color));
+  kr_g2_fill_triangle(v[0],v[1],v[2],v[3],v[4],v[5]);
+}
 
-void ren_draw_image(RenImage *image, RenRect *sub, int x, int y, RenColor color) {}
+void ren_draw_image(RenImage* image, RenRect* rect, float* pos, float* scale) {
+
+  kr_image_t* img = image->ren_data;
+  kr_matrix3x3_t m = kr_g2_get_transform();
+  kr_matrix3x3_t trans = kr_matrix3x3_translation(pos[0],pos[1]);
+
+  m = kr_matrix3x3_multmat(&m,&trans);
+
+  kr_g2_set_transform(m);
+
+  int flipx = scale[2];
+  int flipy = scale[3];
+  int w = rect->width;
+  int h = rect->height;
+  kr_g2_set_color(KINC_COLOR_WHITE);
+  kr_g2_draw_scaled_sub_image(img,rect->x,rect->y,w,h,(flipx > 0.0 ? w:0),(flipy > 0.0 ? h:0),(flipx > 0.0 ? -w:w), (flipy > 0.0 ? -h:h));
+
+}
 
 // int ren_draw_text(RenFont *font, const char *text, int x, int y, RenColor color) {
 //   ren_set_font_tab_width(font, ren_get_font_tab_width(font));
@@ -290,15 +297,12 @@ static int f_draw_rect(lua_State *L) {
 
 static int f_draw_tri(lua_State* L){
 
-  float x = luaL_checknumber(L, 1);
-  float y = luaL_checknumber(L, 2);
-  float x1 = luaL_checknumber(L, 3);
-  float y1 = luaL_checknumber(L, 4);
-  float x2 = luaL_checknumber(L, 5);
-  float y2 = luaL_checknumber(L, 6);
+  float values[6] ={0};
+  for(int i =0; i < 6; ++i){
+    values[i] = luaL_checknumber(L, i+1);
+  }
   RenColor color = checkcolor(L, 7, 255);
-  kr_g2_set_color(color_to_uint(color));
-  kr_g2_fill_triangle(x,y,x1,y1,x2,y2);
+  ren_draw_tri(values,color);
 }
 
 // static int f_draw_text(lua_State *L) {
@@ -333,29 +337,22 @@ static int free_image(lua_State* L) {
   kr_free(img);
 };
 
+
 static int draw_image(lua_State* L) {
+  RenImage image = {0};
   lua_getfield(L,1,"imageData");
-  kr_image_t* img = lua_tolightuserdata(L,-1);
+  image.ren_data = lua_tolightuserdata(L,-1);
   lua_pop(L,1);
 
   float* pos = luaL_checkvector(L,2);
   float* scale = luaL_checkvector(L,3);
-  float x = luaL_checknumber(L,4);
-  float y = luaL_checknumber(L,5);
-  float w = luaL_checknumber(L,6);
-  float h = luaL_checknumber(L,7);
+  RenRect rect = {0};
+  rect.x = luaL_checknumber(L,4);
+  rect.y = luaL_checknumber(L,5);
+  rect.width = luaL_checknumber(L,6);
+  rect.height = luaL_checknumber(L,7);
 
-  kr_matrix3x3_t m = kr_g2_get_transform();
-  kr_matrix3x3_t trans = kr_matrix3x3_translation(pos[0],pos[1]);
-
-  m = kr_matrix3x3_multmat(&m,&trans);
-
-  kr_g2_set_transform(m);
-
-  int flipx = scale[2];
-  int flipy = scale[3];
-  kr_g2_set_color(KINC_COLOR_WHITE);
-  kr_g2_draw_scaled_sub_image(img,x,y,w,h,(flipx > 0.0 ? w:0),(flipy > 0.0 ? h:0),(flipx > 0.0 ? -w:w), (flipy > 0.0 ? -h:h));
+  ren_draw_image(&image,&rect,pos,scale);
 };
 
 static int new_image(lua_State* L) {

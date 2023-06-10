@@ -7,8 +7,15 @@
 extern "C" {
 #endif
 
+typedef struct {
+    double* dt;
+    int* end_state;
+} loop_t;
+
 int luaopen_system(lua_State *L);
-void event_handler(kr_evt_event_t event);
+void luaevent_handler(kr_evt_event_t event);
+int poll_event(kr_evt_event_t* e);
+int module_set_update(int (*func)(void* /*data*/),int id);
 
 #ifdef __cplusplus
 }

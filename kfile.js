@@ -1,4 +1,3 @@
-
 const path = require('path')
 const system = platform === Platform.Windows ? "win32" :
 platform === Platform.Linux   ? "linux" :
@@ -27,10 +26,8 @@ project.addFiles(
 	'Sources/**',
 	'Shaders/**',
 	path.resolve('../Libraries/luau_extensions/loadlib.cpp'),
+	path.resolve('../plugin_api')+'/**',
 );
-
-// project.addLib('dl');
-// project.addLib('m');
 
 project.setDebugDir(outputDir);
 
