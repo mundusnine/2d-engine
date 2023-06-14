@@ -75,6 +75,9 @@ int (*f_update[MAX_FUNCS])(void* /*data*/) = {NULL};
 static int last_id = -1;
 int module_set_update(int (*func)(void* /*data*/),int id){
   assert(id > 0 || func != NULL );
+  //Don't reset to null if it's already null.
+  if(func == NULL && id >0 && f_update[id] == NULL)
+    return -1;
   size_t p_id = id > 0 ? id : last_id > 0 ? last_id :  f_len++;
   f_update[p_id] = func;
   if(p_id == id){
