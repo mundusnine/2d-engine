@@ -243,6 +243,10 @@ static int sleep_ms(int milliseconds){ // cross-platform sleep function
 #endif
 }
 
+int module_reload_asset(const char* filename){
+  //@TODO: Handle file reload.
+}
+
 static int f_wait_event(lua_State *L) {
   double n = luaL_checknumber(L, 1);
   lua_pushboolean(L, sleep_ms(n * 1000));

@@ -27,7 +27,7 @@ function printObj(obj,indent){
 const base_types = ["Void","UInt",    "Int","Float","Double","Char_S","UChar"];
 const convert_to = ["void","unsigned","int","float","double","char"  ,"unsigned char"];
 
-const func_prefix_avoid = ["lua","kr_"]
+const func_prefix_avoid = ["lua","kr_","module_reload"]
 
 const files = ["Sources/system.h","Sources/renderer.h"]
 
